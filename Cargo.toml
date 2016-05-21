@@ -1,0 +1,8 @@
+[package]
+name = "ls"
+version = "0.1.0"
+authors = ["Lain <lain@lain.org.uk>"]
+
+[dependencies]
+term = "0.4.4"
+time = "0.1.35"
