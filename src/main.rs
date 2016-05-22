@@ -10,7 +10,7 @@ fn main() {
     if let Some(mut console) = term::stdout() {
         if std::env::args().len() == 1 {
             // Just print the current directory.
-            ls_dir(&read_dir(".").unwrap().sort(SortType::Name), &mut console);
+            ls_dir(&read_dir(".").unwrap().sort(SortType::Modified), &mut console);
         }
 
         else {
@@ -34,7 +34,7 @@ fn main() {
                         console.fg(term::color::BLUE).unwrap();
                         println!("{}:", &arg);
                         console.reset().unwrap();
-                        ls_dir(&read_dir(&arg).unwrap().sort(SortType::Name), &mut console);
+                        ls_dir(&read_dir(&arg).unwrap().sort(SortType::Modified), &mut console);
                         print!("\n");
                     }
 
