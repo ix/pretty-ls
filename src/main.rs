@@ -1,4 +1,3 @@
-extern crate term;
 extern crate getopts;
 
 mod fileutils;
@@ -43,47 +42,41 @@ fn main() {
         };
     }
 
-    if let Some(mut console) = term::stdout() {
-        if matches.free.is_empty() {
-            // May as well return since we're just
-            // printing the current directory.
-            ls_dir(&read_dir(".").unwrap().sort(&sortmode), &mut console);
-            return;
+    if matches.free.is_empty() {
+        // May as well return since we're just
+        // printing the current directory.
+        ls_dir(&read_dir(".").unwrap().sort(&sortmode));
+        return;
+    }
+
+    for arg in &matches.free {
+        if !fileutils::exists(arg) {
+            println!("No such file or directory: {}", arg);
         }
 
-        for arg in &matches.free {
-            if !fileutils::exists(arg) {
-                println!("No such file or directory: {}", arg);
+        else {
+            if fileutils::is_directory(arg) {
+                println!("{}:", arg);
+                ls_dir(&read_dir(arg).unwrap().sort(&sortmode));
             }
 
             else {
-                if fileutils::is_directory(arg) {
-                    println!("{}:", arg);
-                    ls_dir(&read_dir(arg).unwrap().sort(&sortmode), &mut console);
-                }
-
-                else {
-                    match std::fs::metadata(arg) {
-                        Ok(m) => m.print(arg, &mut console).unwrap(),
-                        _ => panic!("Couldn't get metadata.")
-                    }
+                match std::fs::metadata(arg) {
+                    Ok(m) => m.print(arg).unwrap(),
+                    _ => panic!("Couldn't get metadata.")
                 }
             }
         }
-    }
-
-    else {
-        println!("Couldn't open a terminal.")
     }
 }
 
 
 // Accepts a Vec of DirEntry rather than a ReadDir so
 // that sorting can be applied beforehand.
-fn ls_dir(dir: &Vec<DirEntry>, mut console: &mut Box<term::StdoutTerminal>) {
+fn ls_dir(dir: &Vec<DirEntry>) {
     for item in dir {
         if let Ok(m) = item.metadata() {
-            m.print(&item.file_name().into_string().unwrap(), &mut console).unwrap();
+            m.print(&item.file_name().into_string().unwrap()).unwrap();
         }
     }
 }

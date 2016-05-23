@@ -4,6 +4,6 @@ version = "0.9.1"
 authors = ["Lain <lain@lain.org.uk>"]
 
 [dependencies]
-term = "0.4.4"
+ansi_term = "0.7.2"
 time = "0.1.35"
 getopts = "0.2.14"

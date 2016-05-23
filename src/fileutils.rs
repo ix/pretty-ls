@@ -1,4 +1,4 @@
-extern crate term;
+extern crate ansi_term;
 extern crate time;
 
 use std::fs;
@@ -6,6 +6,7 @@ use std::io;
 use std::path::Path;
 use std::convert::AsRef;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
+use self::ansi_term::Colour;
 
 pub fn exists<P: AsRef<Path>>(path: P) -> bool {
     match fs::metadata(path) {
@@ -25,13 +26,13 @@ pub fn is_directory<P: AsRef<Path>>(path: P) -> bool {
 }
 
 pub trait Printer {
-    fn print(&self, filename: &String, term: &mut Box<term::StdoutTerminal>) -> io::Result<()>;
-    fn relative(&self) -> io::Result<(String, term::color::Color)>;
-    fn formatted_size(&self) -> io::Result<(String, term::color::Color)>;
+    fn print(&self, filename: &String) -> io::Result<()>;
+    fn relative(&self) -> io::Result<(String, Colour)>;
+    fn formatted_size(&self) -> io::Result<(String, Colour)>;
 }
 
 impl Printer for fs::Metadata {
-    fn print(&self, filename: &String, term: &mut Box<term::StdoutTerminal>) -> io::Result<()> {
+    fn print(&self, filename: &String) -> io::Result<()> {
         const S_IRUSR: u32 = 0o0000400;
         const S_IWUSR: u32 = 0o0000200;
         const S_IXUSR: u32 = 0o0000100;
@@ -46,57 +47,45 @@ impl Printer for fs::Metadata {
         let permissions = self.permissions().mode();
 
         if filetype.is_dir() {
-            try!(term.fg(term::color::BLUE));
-            print!("d");
-            try!(term.reset());
+            print!("{}", Colour::Blue.paint("d"));
         }
 
         else if filetype.is_symlink() {
-            try!(term.fg(term::color::GREEN));
-            print!("l");
-            try!(term.reset());
+            print!("{}", Colour::Green.paint("l"));
         }
 
         else {
-            try!(term.fg(term::color::BRIGHT_BLACK));
-            print!("-");
-            try!(term.reset());
+            print!("{}", Colour::Black.bold().paint("-"));
         }
 
         // I'm sorry.
         macro_rules! permission {
             ($bit:ident, $color:ident, $char:expr) => (
                 if permissions & $bit != 0 {
-                    try!(term.fg(term::color::$color));
-                    print!($char);
-                    try!(term.reset());
+                    print!("{}", Colour::$color.paint($char));
                 }
 
                 else {
-                    try!(term.fg(term::color::BRIGHT_BLACK));
-                    print!("-");
-                    try!(term.reset());
+                    print!("{}", Colour::Black.bold().paint("-"));
                 }
             )
         }
 
-        permission!(S_IRUSR, RED, "r");
-        permission!(S_IWUSR, YELLOW, "w");
-        permission!(S_IXUSR, WHITE, "x");
+        permission!(S_IRUSR, Red, "r");
+        permission!(S_IWUSR, Yellow, "w");
+        permission!(S_IXUSR, White, "x");
 
-        permission!(S_IRGRP, RED, "r");
-        permission!(S_IWGRP, YELLOW, "w");
-        permission!(S_IXGRP, WHITE, "x");
+        permission!(S_IRGRP, Red, "r");
+        permission!(S_IWGRP, Yellow, "w");
+        permission!(S_IXGRP, White, "x");
 
-        permission!(S_IROTH, RED, "r");
-        permission!(S_IWOTH, YELLOW, "w");
-        permission!(S_IXOTH, WHITE, "x");
+        permission!(S_IROTH, Red, "r");
+        permission!(S_IWOTH, Yellow, "w");
+        permission!(S_IXOTH, White, "x");
 
         match self.relative() {
             Ok((s, c)) => {
-                try!(term.fg(c));
-                print!("{}", s);
-                try!(term.reset());
+                print!("{}", c.paint(s));
             },
 
             Err(_) => {}
@@ -104,9 +93,7 @@ impl Printer for fs::Metadata {
 
         match self.formatted_size() {
             Ok((s, c)) => {
-                try!(term.fg(c));
-                print!("{}", s);
-                try!(term.reset());
+                print!("{}", c.paint(s));
             },
 
             Err(_) => {}
@@ -115,23 +102,17 @@ impl Printer for fs::Metadata {
         macro_rules! fancy {
             ($filename:expr) => (
                 if filetype.is_dir() {
-                    try!(term.fg(term::color::BLUE));
-                    print!(" {}", $filename);
-                    try!(term.reset());
+                    print!(" {}", Colour::Blue.paint($filename));
                     print!("/");
                 }
 
                 else if filetype.is_symlink() {
-                    try!(term.fg(term::color::MAGENTA));
-                    print!(" {}", $filename);
-                    try!(term.reset());
+                    print!(" {}", Colour::Purple.paint($filename));
                     print!("@");
                 }
 
                 else if (permissions & S_IXUSR) != 0 {
-                    try!(term.fg(term::color::GREEN));
-                    print!(" {}", $filename);
-                    try!(term.reset());
+                    print!(" {}", Colour::Green.paint($filename));
                     print!("*");
                 }
 
@@ -141,33 +122,33 @@ impl Printer for fs::Metadata {
             )
         }
 
-        fancy!(filename);
+        fancy!(filename.as_str());
         print!("\n");
 
         Ok(())
     }
 
-    fn relative(&self) -> io::Result<(String, term::color::Color)> {
+    fn relative(&self) -> io::Result<(String, Colour)> {
         let diff = time::get_time().sec - self.mtime();
         let day_diff = diff / 86400;
 
         Ok(match diff {
-            0 ... 59 => (format!("{:>3}s", diff), term::color::WHITE),
-            60 ... 3600 => (format!("{:>3}m", diff / 60), term::color::RED),
-            3600 ... 86400 => (format!("{:>3}h", diff / 3600), term::color::YELLOW),
+            0 ... 59 => (format!("{:>3}s", diff), Colour::White),
+            60 ... 3600 => (format!("{:>3}m", diff / 60), Colour::Red),
+            3600 ... 86400 => (format!("{:>3}h", diff / 3600), Colour::Yellow),
             _ => {
                 if day_diff > 7 {
-                    (format!("{:>3}w", day_diff / 7), term::color::BRIGHT_BLACK)
+                    (format!("{:>3}w", day_diff / 7), Colour::Black) // bright
                 }
 
                 else {
-                    (format!("{:>3}d", day_diff), term::color::GREEN)
+                    (format!("{:>3}d", day_diff), Colour::Green)
                 }
             }
         })
     }
 
-    fn formatted_size(&self) -> io::Result<(String, term::color::Color)> {
+    fn formatted_size(&self) -> io::Result<(String, Colour)> {
         let bytes: f64 = self.size() as f64;
         const B: f64 = 1024.0;
         const K: f64 = B * B;
@@ -192,16 +173,16 @@ impl Printer for fs::Metadata {
         }
 
         Ok(match bytes {
-            0.0 ... B => (sizify!(bytes, "B"), term::color::WHITE),
-            B ... K => (sizify!(bytes / B, "K"), term::color::YELLOW),
-            K ... M => (sizify!(bytes / K, "M"), term::color::RED),
-            M ... G => (sizify!(bytes / M, "G"), term::color::MAGENTA),
-            G ... T => (sizify!(bytes / G, "T"), term::color::GREEN),
-            T ... P => (sizify!(bytes / T, "P"), term::color::CYAN),
-            P ... E => (sizify!(bytes / P, "E"), term::color::BRIGHT_GREEN),
-            E ... Z => (sizify!(bytes / E, "Z"), term::color::BRIGHT_RED),
-            Z ... Y => (sizify!(bytes / Z, "Y"), term::color::BRIGHT_WHITE),
-            _ => (sizify!(bytes / M, "G"), term::color::BLUE)
+            0.0 ... B => (sizify!(bytes, "B"), Colour::White),
+            B ... K => (sizify!(bytes / B, "K"), Colour::Yellow),
+            K ... M => (sizify!(bytes / K, "M"), Colour::Red),
+            M ... G => (sizify!(bytes / M, "G"), Colour::Purple),
+            G ... T => (sizify!(bytes / G, "T"), Colour::Green),
+            T ... P => (sizify!(bytes / T, "P"), Colour::Cyan),
+            P ... E => (sizify!(bytes / P, "E"), Colour::Green), // bright
+            E ... Z => (sizify!(bytes / E, "Z"), Colour::Red), // bright
+            Z ... Y => (sizify!(bytes / Z, "Y"), Colour::White), // bright
+            _ => (sizify!(bytes / M, "G"), Colour::Blue)
         })
     }
 }
