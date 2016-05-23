@@ -20,7 +20,7 @@ fn main() {
     let mut sortmode: SortType = SortType::Unsorted;
     let mut opts = Options::new();
 
-    opts.optopt("s", "sort", "set sort mode (size | name | modified)", "SORT");
+    opts.optopt("s", "sort", "set sort mode to one of: size, name, modified", "MODE");
     opts.optflag("h", "help", "print the help screen");
 
     let matches = match opts.parse(&args[1..]) {
@@ -29,7 +29,7 @@ fn main() {
     };
 
     if matches.opt_present("h") {
-        print!("usage: {} [options] [files]", program);
+        print!("{}", opts.usage(&*format!("usage: {} [opts] [files]", program)));
         return;
     }
 
