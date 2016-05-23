@@ -1,49 +1,71 @@
 extern crate term;
+extern crate getopts;
+
 mod fileutils;
 mod sorting;
 
+use getopts::Options;
+
+use std::env;
 use std::fs::{read_dir, DirEntry};
+
 use fileutils::Printer;
 use sorting::{Sorter, SortType};
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let program: String = args[0].clone();
+
+    // Initial (unsorted) sort mode.
+    let mut sortmode: SortType = SortType::Unsorted;
+    let mut opts = Options::new();
+
+    opts.optopt("s", "sort", "set sort mode (size | name | modified)", "SORT");
+    opts.optflag("h", "help", "print the help screen");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m },
+        Err(f) => panic!(f.to_string())
+    };
+
+    if matches.opt_present("h") {
+        print!("usage: {} [options] [files]", program);
+        return;
+    }
+
+    // If a valid sort mode was given, mutate the sortmode.
+    if let Some(sortvalue) = matches.opt_str("s") {
+        sortmode = match &*sortvalue {
+            "size" => SortType::Size,
+            "name" => SortType::Name,
+            "modified" => SortType::Modified,
+            _ => SortType::Unsorted
+        };
+    }
+
     if let Some(mut console) = term::stdout() {
-        if std::env::args().len() == 1 {
-            // Just print the current directory.
-            ls_dir(&read_dir(".").unwrap().sort(SortType::Modified), &mut console);
+        if matches.free.is_empty() {
+            // May as well return since we're just
+            // printing the current directory.
+            ls_dir(&read_dir(".").unwrap().sort(&sortmode), &mut console);
+            return;
         }
 
-        else {
-            // Skip the name of the program.
-            for arg in std::env::args().skip(1) {
-                let exists = fileutils::exists(&arg);
-                let directory = fileutils::is_directory(&arg);
+        for arg in &matches.free {
+            if !fileutils::exists(arg) {
+                println!("No such file or directory: {}", arg);
+            }
 
-                // Directory doesn't exist so we'll just print
-                // a warning, like GNU ls does. But prettier.
-                if !exists {
-                    console.fg(term::color::RED).unwrap();
-                    println!("cannot access `{}: No such file or directory", &arg);
-                    console.reset().unwrap();
+            else {
+                if fileutils::is_directory(arg) {
+                    println!("{}:", arg);
+                    ls_dir(&read_dir(arg).unwrap().sort(&sortmode), &mut console);
                 }
 
                 else {
-                    // If the argument is a directory then print its
-                    // contents as we would the current one.
-                    if directory {
-                        console.fg(term::color::BLUE).unwrap();
-                        println!("{}:", &arg);
-                        console.reset().unwrap();
-                        ls_dir(&read_dir(&arg).unwrap().sort(SortType::Modified), &mut console);
-                        print!("\n");
-                    }
-
-                    // TODO: construct a DirEntry from the filename
-                    // and print as we would normally.
-                    else {
-                        console.fg(term::color::CYAN).unwrap();
-                        println!("{}", &arg);
-                        console.reset().unwrap();
+                    match std::fs::metadata(arg) {
+                        Ok(m) => m.print(arg, &mut console).unwrap(),
+                        _ => panic!("Couldn't get metadata.")
                     }
                 }
             }
@@ -58,9 +80,10 @@ fn main() {
 
 // Accepts a Vec of DirEntry rather than a ReadDir so
 // that sorting can be applied beforehand.
-fn ls_dir(dir: &Vec<DirEntry>, mut term: &mut Box<term::StdoutTerminal>) {
+fn ls_dir(dir: &Vec<DirEntry>, mut console: &mut Box<term::StdoutTerminal>) {
     for item in dir {
-        item.print(&mut term).unwrap();
-        print!("\n");
+        if let Ok(m) = item.metadata() {
+            m.print(&item.file_name().into_string().unwrap(), &mut console).unwrap();
+        }
     }
 }

@@ -11,12 +11,12 @@ pub enum SortType {
 }
 
 pub trait Sorter {
-    fn sort(&mut self, method: SortType) -> Vec<fs::DirEntry>;
+    fn sort(&mut self, method: &SortType) -> Vec<fs::DirEntry>;
 }
 
 impl Sorter for fs::ReadDir {
-    fn sort(&mut self, method: SortType) -> Vec<fs::DirEntry> {
-        match method {
+    fn sort(&mut self, method: &SortType) -> Vec<fs::DirEntry> {
+        match *method {
             SortType::Name => self.sort_by_name(),
             SortType::Size => self.sort_by_size(),
             SortType::Modified => self.sort_by_modified(),

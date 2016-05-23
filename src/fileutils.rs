@@ -25,13 +25,13 @@ pub fn is_directory<P: AsRef<Path>>(path: P) -> bool {
 }
 
 pub trait Printer {
-    fn print(&self, term: &mut Box<term::StdoutTerminal>) -> io::Result<()>;
+    fn print(&self, filename: &String, term: &mut Box<term::StdoutTerminal>) -> io::Result<()>;
     fn relative(&self) -> io::Result<(String, term::color::Color)>;
     fn formatted_size(&self) -> io::Result<(String, term::color::Color)>;
 }
 
-impl Printer for fs::DirEntry {
-    fn print(&self, term: &mut Box<term::StdoutTerminal>) -> io::Result<()> {
+impl Printer for fs::Metadata {
+    fn print(&self, filename: &String, term: &mut Box<term::StdoutTerminal>) -> io::Result<()> {
         const S_IRUSR: u32 = 0o0000400;
         const S_IWUSR: u32 = 0o0000200;
         const S_IXUSR: u32 = 0o0000100;
@@ -42,9 +42,8 @@ impl Printer for fs::DirEntry {
         const S_IWOTH: u32 = 0o0000002;
         const S_IXOTH: u32 = 0o0000001;
 
-        let metadata = try!(self.metadata());
-        let filetype = metadata.file_type();
-        let permissions = metadata.permissions().mode();
+        let filetype = self.file_type();
+        let permissions = self.permissions().mode();
 
         if filetype.is_dir() {
             try!(term.fg(term::color::BLUE));
@@ -142,16 +141,14 @@ impl Printer for fs::DirEntry {
             )
         }
 
-        match self.file_name().into_string() {
-            Ok(filename) => fancy!(filename),
-            Err(_) => {}
-        }
+        fancy!(filename);
+        print!("\n");
 
         Ok(())
     }
 
     fn relative(&self) -> io::Result<(String, term::color::Color)> {
-        let diff = time::get_time().sec - try!(self.metadata()).mtime();
+        let diff = time::get_time().sec - self.mtime();
         let day_diff = diff / 86400;
 
         Ok(match diff {
@@ -171,7 +168,7 @@ impl Printer for fs::DirEntry {
     }
 
     fn formatted_size(&self) -> io::Result<(String, term::color::Color)> {
-        let bytes: f64 = try!(self.metadata()).size() as f64;
+        let bytes: f64 = self.size() as f64;
         const B: f64 = 1024.0;
         const K: f64 = B * B;
         const M: f64 = K * B;
