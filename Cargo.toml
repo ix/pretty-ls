@@ -1,6 +1,6 @@
 [package]
 name = "pls"
-version = "0.9.1"
+version = "1.0.0"
 authors = ["Lain <lain@lain.org.uk>"]
 
 [dependencies]
