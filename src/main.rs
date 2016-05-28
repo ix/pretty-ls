@@ -9,7 +9,7 @@ use std::env;
 use std::fs::{read_dir, DirEntry};
 
 use fileutils::Printer;
-use sorting::{Sorter, SortType};
+use sorting::{Sorter, SortType, RawFilter};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -17,9 +17,11 @@ fn main() {
 
     // Initial (unsorted) sort mode.
     let mut sortmode: SortType = SortType::Unsorted;
+    let mut dotfiles: bool = false;
     let mut opts = Options::new();
 
     opts.optopt("s", "sort", "set sort mode to one of: size, name, modified", "MODE");
+    opts.optflag("a", "all", "show all files, including dotfiles");
     opts.optflag("h", "help", "print the help screen");
 
     let matches = match opts.parse(&args[1..]) {
@@ -30,6 +32,10 @@ fn main() {
     if matches.opt_present("h") {
         print!("{}", opts.usage(&*format!("usage: {} [opts] [files]", program)));
         return;
+    }
+
+    if matches.opt_present("a") {
+        dotfiles = true;
     }
 
     // If a valid sort mode was given, mutate the sortmode.
@@ -45,7 +51,16 @@ fn main() {
     if matches.free.is_empty() {
         // May as well return since we're just
         // printing the current directory.
-        ls_dir(&read_dir(".").unwrap().sort(&sortmode));
+        let mut files = read_dir(".").unwrap().sort(&sortmode);
+
+        if dotfiles { 
+            ls_dir(&files);
+        }
+
+        else {
+            ls_dir(&files.dotfilter());
+        }
+        
         return;
     }
 
@@ -56,8 +71,16 @@ fn main() {
 
         else {
             if fileutils::is_directory(arg) {
+                let mut files = read_dir(arg).unwrap().sort(&sortmode);
+                
                 println!("{}:", arg);
-                ls_dir(&read_dir(arg).unwrap().sort(&sortmode));
+                if dotfiles {
+                    ls_dir(&files);
+                }
+
+                else {
+                    ls_dir(&files.dotfilter());
+                }
             }
 
             else {

@@ -25,6 +25,32 @@ impl Sorter for fs::ReadDir {
     }
 }
 
+pub trait RawFilter {
+    fn dotfilter(&mut self) -> &Vec<fs::DirEntry>;
+}
+
+impl RawFilter for Vec<fs::DirEntry> {
+    fn dotfilter(&mut self) -> &Vec<fs::DirEntry> {
+        self.retain(|file| {
+            if let Ok(filename) = file.file_name().into_string() {
+                if filename.as_bytes()[0] == 46 {
+                    return false
+                }
+
+                else {
+                    return true
+                }
+            }
+
+            else {
+                return true
+            }
+        });
+        
+        self
+    }
+}
+
 trait RawSorter {
     fn sort_by_name(&mut self) -> Vec<fs::DirEntry>;
     fn sort_by_size(&mut self) -> Vec<fs::DirEntry>;
