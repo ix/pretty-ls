@@ -1,7 +1,8 @@
 pretty-ls (pls)
 ===============
 
-This project is an implementation of a "minimalist" `ls` in Rust.
+pretty-ls is a "minimalist" `ls` implementation written in Rust.
+It is often faster than GNU `ls`, while providing much more eye-pleasing output.
 
 ![pls in use](/meta/pls.png)
 
