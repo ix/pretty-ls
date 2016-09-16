@@ -1,7 +1,7 @@
 [package]
 name = "pls"
-version = "1.0.0"
-authors = ["Lain <lain@lain.org.uk>"]
+version = "1.0.3"
+authors = ["Rose <lain@lain.org.uk>"]
 
 [dependencies]
 ansi_term = "0.7.2"

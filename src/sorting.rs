@@ -70,19 +70,7 @@ impl RawSorter for fs::ReadDir {
         }
 
         &files.sort_by(|a, b| {
-            if let Ok(a_filename) = a.file_name().into_string() {
-                if let Ok(b_filename) = b.file_name().into_string() {
-                    a_filename.cmp(&b_filename)
-                }
-
-                else {
-                    Ordering::Equal
-                }
-            }
-
-            else {
-                Ordering::Equal
-            }
+            a.file_name().cmp(&b.file_name())
         });
 
         files

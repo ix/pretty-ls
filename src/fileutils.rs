@@ -2,37 +2,17 @@ extern crate ansi_term;
 extern crate time;
 
 use std::fs;
-use std::io;
-use std::path::Path;
-use std::convert::AsRef;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use self::ansi_term::Colour;
 
-pub fn exists<P: AsRef<Path>>(path: P) -> bool {
-    match fs::metadata(path) {
-        Ok(_) => true,
-        _     => false
-    }
-}
-
-pub fn is_directory<P: AsRef<Path>>(path: P) -> bool {
-    match fs::metadata(path) {
-        Ok(metadata) => {
-            metadata.is_dir()
-        },
-
-        _ => false
-    }
-}
-
 pub trait Printer {
-    fn print(&self, filename: &String) -> io::Result<()>;
-    fn relative(&self) -> io::Result<(String, Colour)>;
-    fn formatted_size(&self) -> io::Result<(String, Colour)>;
+    fn print(&self, filename: &String);
+    fn relative(&self) -> (String, Colour);
+    fn formatted_size(&self) -> (String, Colour);
 }
 
 impl Printer for fs::Metadata {
-    fn print(&self, filename: &String) -> io::Result<()> {
+    fn print(&self, filename: &String) {
         const S_IRUSR: u32 = 0o0000400;
         const S_IWUSR: u32 = 0o0000200;
         const S_IXUSR: u32 = 0o0000100;
@@ -83,20 +63,12 @@ impl Printer for fs::Metadata {
         permission!(S_IWOTH, Yellow, "w");
         permission!(S_IXOTH, White, "x");
 
-        match self.relative() {
-            Ok((s, c)) => {
-                print!("{}", c.paint(s));
-            },
-
-            Err(_) => {}
+        let (s, c) = self.relative(); {
+            print!("{}", c.paint(s));
         }
 
-        match self.formatted_size() {
-            Ok((s, c)) => {
-                print!("{}", c.paint(s));
-            },
-
-            Err(_) => {}
+        let (s, c) = self.formatted_size(); {
+            print!("{}", c.paint(s));
         }
 
         macro_rules! fancy {
@@ -124,15 +96,13 @@ impl Printer for fs::Metadata {
 
         fancy!(filename.as_str());
         print!("\n");
-
-        Ok(())
     }
 
-    fn relative(&self) -> io::Result<(String, Colour)> {
+    fn relative(&self) -> (String, Colour) {
         let diff = time::get_time().sec - self.mtime();
         let day_diff = diff / 86400;
 
-        Ok(match diff {
+        match diff {
             0 ... 59 => (format!("{:>3}s", diff), Colour::White),
             60 ... 3600 => (format!("{:>3}m", diff / 60), Colour::Red),
             3600 ... 86400 => (format!("{:>3}h", diff / 3600), Colour::Yellow),
@@ -140,15 +110,15 @@ impl Printer for fs::Metadata {
                 if day_diff > 7 {
                     (format!("{:>3}w", day_diff / 7), Colour::Black) // bright
                 }
-
+                
                 else {
                     (format!("{:>3}d", day_diff), Colour::Green)
                 }
             }
-        })
+        }
     }
 
-    fn formatted_size(&self) -> io::Result<(String, Colour)> {
+    fn formatted_size(&self) -> (String, Colour) {
         let bytes: f64 = self.size() as f64;
         const B: f64 = 1024.0;
         const K: f64 = B * B;
@@ -172,7 +142,7 @@ impl Printer for fs::Metadata {
             )
         }
 
-        Ok(match bytes {
+        match bytes {
             0.0 ... B => (sizify!(bytes, "B"), Colour::White),
             B ... K => (sizify!(bytes / B, "K"), Colour::Yellow),
             K ... M => (sizify!(bytes / K, "M"), Colour::Red),
@@ -183,6 +153,6 @@ impl Printer for fs::Metadata {
             E ... Z => (sizify!(bytes / E, "Z"), Colour::Red), // bright
             Z ... Y => (sizify!(bytes / Z, "Y"), Colour::White), // bright
             _ => (sizify!(bytes / M, "G"), Colour::Blue)
-        })
+        }
     }
 }

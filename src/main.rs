@@ -7,6 +7,7 @@ use getopts::Options;
 
 use std::env;
 use std::fs::{read_dir, DirEntry};
+use std::path::Path;
 
 use fileutils::Printer;
 use sorting::{Sorter, SortType, RawFilter};
@@ -65,12 +66,12 @@ fn main() {
     }
 
     for arg in &matches.free {
-        if !fileutils::exists(arg) {
+        if !Path::new(arg).exists() {
             println!("No such file or directory: {}", arg);
         }
 
         else {
-            if fileutils::is_directory(arg) {
+            if Path::new(arg).is_dir() {
                 let mut files = read_dir(arg).unwrap().sort(&sortmode);
                 
                 println!("{}:", arg);
@@ -85,7 +86,7 @@ fn main() {
 
             else {
                 match std::fs::metadata(arg) {
-                    Ok(m) => m.print(arg).unwrap(),
+                    Ok(m) => m.print(arg),
                     _ => panic!("Couldn't get metadata.")
                 }
             }
@@ -99,7 +100,7 @@ fn main() {
 fn ls_dir(dir: &Vec<DirEntry>) {
     for item in dir {
         if let Ok(m) = item.metadata() {
-            m.print(&item.file_name().into_string().unwrap()).unwrap();
+            m.print(&item.file_name().into_string().unwrap());
         }
     }
 }
