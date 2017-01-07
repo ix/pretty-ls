@@ -60,14 +60,7 @@ trait RawSorter {
 
 impl RawSorter for fs::ReadDir {
     fn sort_by_name(&mut self) -> Vec<fs::DirEntry> {
-        let mut files = Vec::new();
-
-        for file in self {
-            match file {
-                Ok(file) => files.push(file),
-                _ => {}
-            }
-        }
+        let mut files = self.filter_map(|f| f.ok()).collect::<Vec<fs::DirEntry>>();
 
         &files.sort_by(|a, b| {
             a.file_name().cmp(&b.file_name())
@@ -77,14 +70,7 @@ impl RawSorter for fs::ReadDir {
     }
 
     fn sort_by_size(&mut self) -> Vec<fs::DirEntry> {
-        let mut files = Vec::new();
-
-        for file in self {
-            match file {
-                Ok(file) => files.push(file),
-                _ => {}
-            }
-        }
+        let mut files = self.filter_map(|f| f.ok()).collect::<Vec<fs::DirEntry>>();
 
         &files.sort_by(|a, b| {
             if let (Ok(m1), Ok(m2)) = (a.metadata(), b.metadata()) {
@@ -100,14 +86,7 @@ impl RawSorter for fs::ReadDir {
     }
 
     fn sort_by_modified(&mut self) -> Vec<fs::DirEntry> {
-        let mut files = Vec::new();
-
-        for file in self {
-            match file {
-                Ok(file) => files.push(file),
-                _ => {}
-            }
-        }
+        let mut files = self.filter_map(|f| f.ok()).collect::<Vec<fs::DirEntry>>();
 
         &files.sort_by(|a, b|{
             if let (Ok(m1), Ok(m2)) = (a.metadata(), b.metadata()) {
@@ -123,15 +102,6 @@ impl RawSorter for fs::ReadDir {
     }
 
     fn unsorted(&mut self) -> Vec<fs::DirEntry> {
-        let mut files = Vec::new();
-
-        for file in self {
-            match file {
-                Ok(file) => files.push(file),
-                _ => {}
-            }
-        }
-
-        files
+        self.filter_map(|f| f.ok()).collect()
     }
 }
